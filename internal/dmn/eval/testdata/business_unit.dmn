@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="bu" name="BU Networking">
+  <decision id="dec" name="Network Lookup">
+    <variable name="net"/>
+    <decisionTable id="dt" hitPolicy="UNIQUE">
+      <input id="i1" label="BU"><inputExpression typeRef="string"><text>business_unit</text></inputExpression></input>
+      <input id="i2" label="Replicas"><inputExpression typeRef="number"><text>replicas</text></inputExpression></input>
+      <output id="o1" name="subnet_id" typeRef="string"/>
+      <output id="o2" name="vnet_name" typeRef="string"/>
+      <rule id="r1">
+        <inputEntry><text>"payments"</text></inputEntry>
+        <inputEntry><text>[1..10]</text></inputEntry>
+        <outputEntry><text>"snet-pay-small"</text></outputEntry>
+        <outputEntry><text>"vnet-pay"</text></outputEntry>
+      </rule>
+      <rule id="r2">
+        <inputEntry><text>"payments"</text></inputEntry>
+        <inputEntry><text>&gt; 10</text></inputEntry>
+        <outputEntry><text>"snet-pay-large"</text></outputEntry>
+        <outputEntry><text>"vnet-pay"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

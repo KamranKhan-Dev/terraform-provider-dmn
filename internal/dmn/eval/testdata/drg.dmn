@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="d" name="Pricing">
+  <inputData id="id_spend" name="spend"><variable name="spend" typeRef="number"/></inputData>
+
+  <decision id="dec_tier" name="Tier">
+    <variable name="tier" typeRef="string"/>
+    <informationRequirement><requiredInput href="#id_spend"/></informationRequirement>
+    <decisionTable id="dt_tier" hitPolicy="UNIQUE">
+      <input id="i1"><inputExpression typeRef="number"><text>spend</text></inputExpression></input>
+      <output id="o1" name="tier" typeRef="string"/>
+      <rule id="t1"><inputEntry><text>&gt;= 100</text></inputEntry><outputEntry><text>"gold"</text></outputEntry></rule>
+      <rule id="t2"><inputEntry><text>&lt; 100</text></inputEntry><outputEntry><text>"silver"</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+
+  <decision id="dec_disc" name="Discount">
+    <variable name="discount" typeRef="number"/>
+    <informationRequirement><requiredDecision href="#dec_tier"/></informationRequirement>
+    <decisionTable id="dt_disc" hitPolicy="UNIQUE">
+      <input id="i2"><inputExpression typeRef="string"><text>tier</text></inputExpression></input>
+      <output id="o2" name="discount" typeRef="number"/>
+      <rule id="d1"><inputEntry><text>"gold"</text></inputEntry><outputEntry><text>20</text></outputEntry></rule>
+      <rule id="d2"><inputEntry><text>"silver"</text></inputEntry><outputEntry><text>10</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+</definitions>
