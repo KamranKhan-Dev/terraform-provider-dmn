@@ -9,11 +9,11 @@ builds:
       - -trimpath
     ldflags:
       - "-s -w -X main.version={{.Version}}"
+    # 64-bit only: a dependency (pbinitiative/feel) uses duration constants that
+    # overflow a 32-bit int, so 386/arm targets cannot compile. amd64 + arm64
+    # across these platforms is the standard, Registry-accepted matrix.
     goos: [linux, darwin, windows, freebsd]
-    goarch: [amd64, arm64, "386", arm]
-    ignore:
-      - goos: darwin
-        goarch: "386"
+    goarch: [amd64, arm64]
     binary: "{{ .ProjectName }}_v{{ .Version }}"
 archives:
   - formats: [zip]
@@ -25,6 +25,11 @@ signs:
   - artifacts: checksum
     args: ["--batch", "--local-user", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
 release:
+  # The Terraform Registry requires the manifest to be published as a release
+  # asset named terraform-provider-dmn_<version>_manifest.json.
+  extra_files:
+    - glob: 'terraform-registry-manifest.json'
+      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
   draft: false
 changelog:
   disable: true
