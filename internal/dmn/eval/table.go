@@ -100,8 +100,113 @@ func (e *Engine) applyHitPolicy(dt *model.DecisionTable, matched []matchedRule) 
 			return nil, fmt.Errorf("UNIQUE hit policy matched %d rules; exactly one expected", len(matched))
 		}
 		return entries(dt, matched), nil
+
+	case "ANY":
+		if len(matched) > 1 {
+			first := matched[0].outputs
+			for _, m := range matched[1:] {
+				if !sameOutputs(first, m.outputs) {
+					return nil, fmt.Errorf("ANY hit policy matched %d rules with differing outputs", len(matched))
+				}
+			}
+			matched = matched[:1]
+		}
+		return entries(dt, matched), nil
+
+	case "FIRST":
+		if len(matched) > 1 {
+			matched = matched[:1] // matched is already in rule order
+		}
+		return entries(dt, matched), nil
+
+	case "COLLECT":
+		agg := strings.ToUpper(strings.TrimSpace(dt.Aggregation))
+		if agg == "" {
+			return entries(dt, matched), nil
+		}
+		return aggregate(dt, matched, agg)
+
+	case "RULE ORDER", "PRIORITY", "OUTPUT ORDER":
+		// v1: PRIORITY/OUTPUT ORDER require output allowedValues ordering (deferred);
+		// they currently behave as RULE ORDER. Documented limitation.
+		return entries(dt, matched), nil
+
 	default:
-		return nil, fmt.Errorf("hit policy %q not implemented yet", hp)
+		return nil, fmt.Errorf("unsupported hit policy %q", hp)
+	}
+}
+
+func sameOutputs(a, b map[string]any) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		if bv, ok := b[k]; !ok || fmt.Sprintf("%v", av) != fmt.Sprintf("%v", bv) {
+			return false
+		}
+	}
+	return true
+}
+
+// aggregate applies a COLLECT aggregator to the single output column and returns
+// a one-element list holding the scalar result.
+func aggregate(dt *model.DecisionTable, matched []matchedRule, agg string) ([]any, error) {
+	if agg == "COUNT" {
+		return []any{float64(len(matched))}, nil
+	}
+	if len(dt.Outputs) != 1 {
+		return nil, fmt.Errorf("COLLECT %s requires exactly one output column, found %d", agg, len(dt.Outputs))
+	}
+	name := dt.Outputs[0].Name
+	nums := make([]float64, 0, len(matched))
+	for _, m := range matched {
+		f, ok := toFloat(m.outputs[name])
+		if !ok {
+			return nil, fmt.Errorf("COLLECT %s requires numeric outputs, got %T", agg, m.outputs[name])
+		}
+		nums = append(nums, f)
+	}
+	if len(nums) == 0 {
+		return []any{}, nil
+	}
+	switch agg {
+	case "SUM":
+		s := 0.0
+		for _, n := range nums {
+			s += n
+		}
+		return []any{s}, nil
+	case "MIN":
+		m := nums[0]
+		for _, n := range nums[1:] {
+			if n < m {
+				m = n
+			}
+		}
+		return []any{m}, nil
+	case "MAX":
+		m := nums[0]
+		for _, n := range nums[1:] {
+			if n > m {
+				m = n
+			}
+		}
+		return []any{m}, nil
+	default:
+		return nil, fmt.Errorf("unknown COLLECT aggregation %q", agg)
+	}
+}
+
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	default:
+		return 0, false
 	}
 }
 
