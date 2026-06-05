@@ -52,3 +52,39 @@ func TestGoToAttr_Scalar(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, float64(6), back)
 }
+
+func TestGoToAttr_BoolAndEmptyList(t *testing.T) {
+	ctx := context.Background()
+
+	b, err := GoToAttr(ctx, true)
+	require.NoError(t, err)
+	back, err := DynamicToGo(ctx, types.DynamicValue(b))
+	require.NoError(t, err)
+	assert.Equal(t, true, back)
+
+	empty, err := GoToAttr(ctx, []any{})
+	require.NoError(t, err)
+	back, err = DynamicToGo(ctx, types.DynamicValue(empty))
+	require.NoError(t, err)
+	assert.Equal(t, []any{}, back)
+}
+
+func TestDynamicToGo_Null(t *testing.T) {
+	ctx := context.Background()
+	got, err := DynamicToGo(ctx, types.DynamicNull())
+	require.NoError(t, err)
+	assert.Nil(t, got)
+}
+
+func TestGoToAttr_Nil(t *testing.T) {
+	ctx := context.Background()
+	v, err := GoToAttr(ctx, nil)
+	require.NoError(t, err)
+	assert.True(t, v.IsNull())
+}
+
+func TestGoToAttr_UnsupportedType(t *testing.T) {
+	ctx := context.Background()
+	_, err := GoToAttr(ctx, struct{ X int }{X: 1})
+	require.Error(t, err)
+}

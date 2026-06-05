@@ -159,3 +159,21 @@ func TestUnaryReferencesContext(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, match)
 }
+
+func TestUnaryRangeNonNumericInputErrors(t *testing.T) {
+	e := New()
+	// A numeric range against a non-numeric input is a type mismatch, not a
+	// silent non-match.
+	_, err := e.EvalUnaryTest("abc", "[1..10]", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "numeric")
+}
+
+func TestUnaryListEscapedQuote(t *testing.T) {
+	e := New()
+	// The comma splitter must not break on a comma inside a string that also
+	// contains an escaped quote.
+	match, err := e.EvalUnaryTest(`a"b`, `"a\"b","c"`, nil)
+	require.NoError(t, err)
+	assert.True(t, match)
+}

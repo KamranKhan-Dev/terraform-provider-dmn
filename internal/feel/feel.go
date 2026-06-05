@@ -143,16 +143,17 @@ func isRange(el string) bool {
 }
 
 // rangeContains reports whether input falls within the numeric range rv.
-// v1 supports numeric ranges; non-numeric inputs do not match.
+// v1 supports numeric ranges only; non-numeric bounds or inputs are an explicit
+// error rather than a silent non-match, so users are not given a wrong result.
 func rangeContains(rv *pbfeel.RangeValue, input any) (bool, error) {
-	f, ok := toFloat(input)
-	if !ok {
-		return false, nil
-	}
 	start, ok1 := numberToFloat(rv.Start)
 	end, ok2 := numberToFloat(rv.End)
 	if !ok1 || !ok2 {
-		return false, fmt.Errorf("unsupported non-numeric range bounds")
+		return false, fmt.Errorf("non-numeric ranges are not supported in v1")
+	}
+	f, ok := toFloat(input)
+	if !ok {
+		return false, fmt.Errorf("range test requires a numeric input, got %T", input)
 	}
 	lower := f > start || (!rv.StartOpen && f == start)
 	upper := f < end || (!rv.EndOpen && f == end)
@@ -207,9 +208,17 @@ func splitTopLevelCommas(s string) []string {
 	var buf strings.Builder
 	depth := 0
 	inStr := false
+	escaped := false
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		switch {
+		case inStr && escaped:
+			// Previous char was a backslash inside a string: this char is literal.
+			escaped = false
+			buf.WriteByte(c)
+		case inStr && c == '\\':
+			escaped = true
+			buf.WriteByte(c)
 		case c == '"':
 			inStr = !inStr
 			buf.WriteByte(c)

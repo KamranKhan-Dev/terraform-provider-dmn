@@ -2,6 +2,7 @@ package eval
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/KamranKhan-Dev/terraform-provider-dmn/internal/dmn/model"
@@ -141,7 +142,8 @@ func sameOutputs(a, b map[string]any) bool {
 		return false
 	}
 	for k, av := range a {
-		if bv, ok := b[k]; !ok || fmt.Sprintf("%v", av) != fmt.Sprintf("%v", bv) {
+		bv, ok := b[k]
+		if !ok || !reflect.DeepEqual(av, bv) {
 			return false
 		}
 	}
